@@ -1,116 +1,182 @@
+
 import 'package:flutter/material.dart';
 import 'package:future/post.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 
-import 'User.dart';
-
-class HomeScreen extends StatefulWidget {
-  HomeScreen({Key key}) : super(key: key);
-
+class Home extends StatefulWidget {
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  _HomeState createState() => _HomeState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
-  String _baseUrl = "https://jsonplaceholder.typicode.com";
+class _HomeState extends State<Home> {
 
-  Future<List<Post>> _getPosts() async {
-    http.Response response = await http.get(_baseUrl + "/posts");
-    var jsonData = json.decode(response.body);
+  String _urlBase = "https://jsonplaceholder.typicode.com";
+
+  Future<List<Post>> _recuperarPostagens() async {
+    
+    http.Response response = await http.get( _urlBase + "/posts" );
+    var dadosJson = json.decode( response.body );
 
     List<Post> postagens = List();
-    for (var post in jsonData) {
-      print("Post: " + post["title"]);
+    for( var post in dadosJson ){
+      
+      print("post: " + post["title"] );
       Post p = Post(post["userId"], post["id"], post["title"], post["body"]);
-
-      postagens.add(p);
+      postagens.add( p );
+    
     }
-
     return postagens;
+    //print( postagens.toString() );
+    
   }
 
   _post() async {
-    http.Response response = await http.post(
-      _baseUrl + "/posts",
-      headers: {
-        "Content-type": "application/json; charset=UTF-8",
-      },
-      body: {
-        "userId":1,
-        "id":1,
-        "title":"",
-        "body":""
-      }
+
+    Post post = new Post(120, null, "Titulo", "Corpo da postagem");
+
+    var corpo = json.encode(
+        post.toJson()
     );
+
+    http.Response response = await http.post(
+        _urlBase + "/posts",
+      headers: {
+        "Content-type": "application/json; charset=UTF-8"
+      },
+      body: corpo
+    );
+
+    print("resposta: ${response.statusCode}");
+    print("resposta: ${response.body}");
+
   }
 
-  _put() {}
-  _patch() {}
-  _delete() {}
+  _put() async {
+
+    Post post = new Post(120, null, "Titulo", "Corpo da postagem");
+
+    var corpo = json.encode(
+        post.toJson()
+    );
+
+    http.Response response = await http.put(
+        _urlBase + "/posts/2",
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        },
+        body: corpo
+    );
+
+    print("resposta: ${response.statusCode}");
+    print("resposta: ${response.body}");
+
+  }
+
+  _patch() async {
+
+    Post post = new Post(120, null, "Titulo", "Corpo da postagem");
+
+    var corpo = json.encode(
+        post.toJson()
+    );
+
+    http.Response response = await http.patch(
+        _urlBase + "/posts/2",
+        headers: {
+          "Content-type": "application/json; charset=UTF-8"
+        },
+        body: corpo
+    );
+
+    print("resposta: ${response.statusCode}");
+    print("resposta: ${response.body}");
+
+  }
+
+  _delete() async {
+
+    http.Response response = await http.delete(
+      _urlBase + "/posts/2"
+    );
+
+    print("resposta: ${response.statusCode}");
+    print("resposta: ${response.body}");
+
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: Text("Web services"),
-        ),
-        body: Container(
-          padding: EdgeInsets.all(20),
-          child: FutureBuilder<List<Post>>(
-            future: _getPosts(),
-            builder: (context, snapshot) {
-              String result;
-              switch (snapshot.connectionState) {
-                case ConnectionState.none:
-                case ConnectionState.waiting:
-                  return Center(child: CircularProgressIndicator());
-                  break;
+      appBar: AppBar(
+        title: Text("Consumo de serviço avançado"),
+      ),
+      body: Container(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                RaisedButton(
+                  child: Text("Salvar"),
+                  onPressed: _post,
+                ),
+                RaisedButton(
+                  child: Text("Atualizar"),
+                  onPressed: _patch,
+                ),
+                RaisedButton(
+                  child: Text("Remover"),
+                  onPressed: _delete,
+                ),
+              ],
+            ),
+            Expanded(
+              child: FutureBuilder<List<Post>>(
+                future: _recuperarPostagens(),
+                builder: (context, snapshot){
 
-                case ConnectionState.active:
-                case ConnectionState.done:
-                  print("conecao done");
-                  if (snapshot.hasError) {
-                    result = "Erro ao carregar dados.";
-                  } else {
-                    return Column(children: [
-                      Row(
-                        children: [
-                          RaisedButton(
-                            onPressed: () {},
-                            child: Text("Salvar"),
-                          ),
-                          RaisedButton(
-                            onPressed: () {},
-                            child: Text("Atualizar"),
-                          ),
-                          RaisedButton(
-                            onPressed: () {},
-                            child: Text("Remover"),
-                          ),
-                        ],
-                      ),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount: snapshot.data.length,
-                          itemBuilder: (context, index) {
-                            List<Post> lista = snapshot.data;
-                            Post post = lista[index];
+                  switch( snapshot.connectionState ){
+                    case ConnectionState.none :
+                    case ConnectionState.waiting :
+                      return Center(
+                        child: CircularProgressIndicator(),
+                      );
+                      break;
+                    case ConnectionState.active :
+                    case ConnectionState.done :
+                      if( snapshot.hasError ){
+                        print("lista: Erro ao carregar ");
+                      }else {
+                        return ListView.builder(
+                            itemCount: snapshot.data.length,
+                            itemBuilder: (context, index){
 
-                            return ListTile(
-                              title: Text(post.title),
-                              subtitle: Text(post.id.toString()),
-                            );
-                          },
-                        ),
-                      )
-                    ]);
+                              List<Post> lista = snapshot.data;
+                              Post post = lista[index];
+
+                              return ListTile(
+                                title: Text( post.title ),
+                                subtitle: Text( post.id.toString() ),
+                              );
+
+                            }
+                        );
+
+                      }
+                      break;
                   }
-                  break;
-              }
-            },
-          ),
-        ));
+
+                },
+              ),
+            )
+
+
+
+          ],
+        ),
+      ),
+    );
   }
 }
